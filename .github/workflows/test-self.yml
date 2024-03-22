@@ -1,0 +1,57 @@
+name: TestSelf
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      test:
+        default: 'hoge'
+        required: false
+      flag:
+        type: boolean
+        default: false
+        required: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: $github
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: |
+          echo "${GITHUB_CONTEXT}"
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: inputs-test
+        with:
+          name: test
+      - name: Test test
+        run: |
+          test "${{ steps.inputs-test.outputs.value }}" == 'hoge'
+      - uses: ./
+        id: inputs-flag
+        with:
+          name: flag
+      - name: Test flag
+        run: |
+          test "${{ steps.inputs-test.outputs.value }}" == 'false'
+      - uses: ./
+        id: inputs-all
+      - name: Test
+        env:
+          INPUTS_TEST: ${{ toJson(steps.inputs-all.outputs.value).test }}
+          INPUTS_FLAG: ${{ toJson(steps.inputs-all.outputs.value).flag }}
+        run: |
+          test "${{ env.INPUTS_TEST }}" == 'hoge'
+          test "${{ env.INPUTS_FLAG }}" == 'false'
+      
+
+
+  
