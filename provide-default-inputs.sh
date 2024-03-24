@@ -51,11 +51,25 @@ else
     echo '{}' > "${DEFAULT_INPUTS_JSON}"
 fi
 
+if [ -f "${GITHUB_EVENT_PATH:-}" ]; then
+    if [ ! -f "${DOWNLOAD_JSONDIR}/inputs.json" ]; then
+        HAS_KEY=$(jq 'has("inputs")' < "${GITHUB_EVENT_PATH:-}")
+        if [ "${HAS_KEY}" == 'true' ]; then
+            jq '.inputs'  < "${GITHUB_EVENT_PATH:-}" > "${DOWNLOAD_JSONDIR}/inputs.json"
+        fi
+    fi
+fi
+
+INPUTS_JSON="${DEFAULT_INPUTS_JSON}"
+if [ -f "${DOWNLOAD_JSONDIR}/inputs.json" ]; then
+    INPUTS_JSON="${DOWNLOAD_JSONDIR}/inputs.json"
+fi
+
 OUTPUTS_VALUE=$(jq -r ".${SELECT_KEYNAME}" < "${DEFAULT_INPUTS_JSON}")
 if [ -z "${SELECT_KEYNAME}" ]; then
-    OUTPUTS_VALUE=$(jq -c < "${DEFAULT_INPUTS_JSON}")
+    OUTPUTS_VALUE=$(jq -c < "${INPUTS_JSON}")
 else
-    OUTPUTS_VALUE=$(jq -r ".${SELECT_KEYNAME}" < "${DEFAULT_INPUTS_JSON}")
+    OUTPUTS_VALUE=$(jq -r ".${SELECT_KEYNAME}" < "${INPUTS_JSON}")
 fi
 
 echo "json=${DEFAULT_INPUTS_JSON}" | tee -a "${GITHUB_OUTPUT:-/dev/null}"
