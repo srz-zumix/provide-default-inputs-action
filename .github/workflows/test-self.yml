@@ -10,6 +10,8 @@ on:
         type: boolean
         default: false
         required: false
+      nothing:
+        required: false
 
 permissions:
   contents: read
@@ -48,9 +50,11 @@ jobs:
         env:
           INPUTS_TEST: ${{ toJson(steps.inputs-all.outputs.value).test }}
           INPUTS_FLAG: ${{ toJson(steps.inputs-all.outputs.value).flag }}
+          INPUTS_NOTHING: ${{ toJson(steps.inputs-all.outputs.value).nothing }}
         run: |
           test "${{ env.INPUTS_TEST }}" == 'hoge'
           test "${{ env.INPUTS_FLAG }}" == 'false'
+          test "${{ env.INPUTS_NOTHING }}" == ''
       
 
 

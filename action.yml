@@ -1,0 +1,30 @@
+name: 'provide-default-inputs-action'
+description: 'provide default inputs.'
+author: 'srz_zumix'
+inputs:
+  name:
+    description: 'inputs key name. (if empty then all inputs)'
+    default: ""
+
+outputs:
+  value:
+    description: "default inputs value"
+    value: ${{ steps.evalute.outputs.value }}
+  json:
+    description: "default inputs json file path"
+    value: ${{ steps.evalute.outputs.json }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Create default inputs json
+      id: evalute
+      shell: bash
+      env:
+        INPUTS_NAME: ${{ inputs.name }}
+      run: |
+        "${{ github.action_path }}/provide-default-inputs.sh"
+
+branding:
+  icon: 'edit-3'
+  color: 'purple'
