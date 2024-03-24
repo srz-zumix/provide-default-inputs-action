@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euox pipefail
+set -euo pipefail
 
 TEMP_DIR="${RUNNER_TEMP:-./tmp}/provide-default-inputs"
 DOWNLOAD_YAMLFILE="${TEMP_DIR}/provide-default-inputs-download.yml"

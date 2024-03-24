@@ -5,6 +5,8 @@ inputs:
   name:
     description: 'inputs key name. (if empty then all inputs)'
     default: ""
+  inputs-json:
+    default: "${{ toJson(github.event.inputs) }}"
 
 outputs:
   value:
@@ -22,7 +24,9 @@ runs:
       shell: bash
       env:
         INPUTS_NAME: ${{ inputs.name }}
+        INPUTS_JSON: ${{ inputs.inputs-json }}
       run: |
+        echo "${INPUTS_JSON}""
         "${{ github.action_path }}/provide-default-inputs.sh"
 
 branding:
