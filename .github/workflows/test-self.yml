@@ -48,9 +48,9 @@ jobs:
         id: inputs-all
       - name: Test
         env:
-          INPUTS_TEST: ${{ toJson(steps.inputs-all.outputs.value).test }}
-          INPUTS_FLAG: ${{ toJson(steps.inputs-all.outputs.value).flag }}
-          INPUTS_NOTHING: ${{ toJson(steps.inputs-all.outputs.value).nothing }}
+          INPUTS_TEST: ${{ fromJson(steps.inputs-all.outputs.value).test }}
+          INPUTS_FLAG: ${{ fromJson(steps.inputs-all.outputs.value).flag }}
+          INPUTS_NOTHING: ${{ fromJson(steps.inputs-all.outputs.value).nothing }}
         run: |
           test "${{ env.INPUTS_TEST }}" == 'hoge'
           test "${{ env.INPUTS_FLAG }}" == 'false'

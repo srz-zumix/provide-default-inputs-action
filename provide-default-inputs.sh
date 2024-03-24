@@ -27,11 +27,13 @@ to_default_inputs_json() {
 if [ ! -f "${DOWNLOAD_YAMLFILE}" ]; then
     gh workflow view "${WORKFLOW_DOWNLOAD_OPTIONS[@]}" > "${DOWNLOAD_YAMLFILE}"
     yq -o json "${DOWNLOAD_YAMLFILE}" > "${DOWNLOAD_JSONDIR}/download.json"
-    if eval $(jq '.on | has("workflow_dispatch")' < "${DOWNLOAD_JSONDIR}/download.json"); then
+    HAS_KEY=$(jq '.on | has("workflow_dispatch")' < "${DOWNLOAD_JSONDIR}/download.json")
+    if "${HAS_KEY}" == 'true'; then
         jq '.on.workflow_dispatch' < "${DOWNLOAD_JSONDIR}/download.json" \
             | to_default_inputs_json > "${DOWNLOAD_JSONDIR}/workflow_dispatch.json"
     fi
-    if eval $(jq '.on | has("workflow_call")' < "${DOWNLOAD_JSONDIR}/download.json"); then
+    HAS_KEY=$(jq '.on | has("workflow_call")' < "${DOWNLOAD_JSONDIR}/download.json")
+    if "${HAS_KEY}" == 'true'; then
         jq '.on.workflow_call' < "${DOWNLOAD_JSONDIR}/download.json" \
             | to_default_inputs_json > "${DOWNLOAD_JSONDIR}/workflow_call.json"
     fi
