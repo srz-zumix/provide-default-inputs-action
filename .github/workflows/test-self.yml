@@ -44,6 +44,9 @@ jobs:
           GITHUB_CONTEXT: ${{ toJson(github) }}
         run: |
           echo "${GITHUB_CONTEXT}"
+      - name: GITHUB_EVENT_PATH
+        run: |
+          cat "${GITHUB_EVENT_PATH}"
       - uses: actions/checkout@v4
       - uses: ./
         id: inputs-test
