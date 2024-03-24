@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-if [ "${GITHUB_DEBUG:-}" == 'true' ]; then
+if [ "${ACTIONS_RUNNER_DEBUG:-}" == 'true' ]; then
     set -x
 fi
 
