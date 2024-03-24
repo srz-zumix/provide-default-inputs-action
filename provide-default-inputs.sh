@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+if [ "${GITHUB_DEBUG:-}" == 'true' ]; then
+    set -x
+fi
+
 TEMP_DIR="${RUNNER_TEMP:-./tmp}/provide-default-inputs"
 DOWNLOAD_YAMLFILE="${TEMP_DIR}/provide-default-inputs-download.yml"
 DOWNLOAD_JSONDIR="${TEMP_DIR}/provide-default-inputs-download-jsons"
