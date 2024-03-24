@@ -6,7 +6,8 @@ inputs:
     description: 'inputs key name. (if empty then all inputs)'
     default: ""
   inputs-json:
-    default: "${{ toJson(inputs) }}"
+    description: "required: ${{ toJson(inputs) }}"
+    required: true
 
 outputs:
   value:

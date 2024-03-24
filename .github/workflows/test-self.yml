@@ -52,6 +52,7 @@ jobs:
         id: inputs-test
         with:
           name: test
+          inputs-json: ${{ toJson(inputs) }}
       - name: Test test
         env:
           ACTUAL: ${{ steps.inputs-test.outputs.value }}
@@ -62,6 +63,7 @@ jobs:
         id: inputs-flag
         with:
           name: flag
+          inputs-json: ${{ toJson(inputs) }}
       - name: Test flag
         env:
           ACTUAL: ${{ steps.inputs-flag.outputs.value }}
@@ -70,6 +72,8 @@ jobs:
           test "${ACTUAL}" == "${EXPECT}"
       - uses: ./
         id: inputs-all
+        with:
+          inputs-json: ${{ toJson(inputs) }}
       - name: Test
         env:
           ACTUAL_TEST: ${{ fromJson(steps.inputs-all.outputs.value).test }}
