@@ -43,7 +43,7 @@ jobs:
           name: flag
       - name: Test flag
         run: |
-          test "${{ steps.inputs-test.outputs.value }}" == 'false'
+          test "${{ steps.inputs-flag.outputs.value }}" == 'false'
       - uses: ./
         id: inputs-all
       - name: Test
