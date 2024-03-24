@@ -22,7 +22,6 @@ runs:
       shell: bash
       env:
         INPUTS_NAME: ${{ inputs.name }}
-        ACTIONS_STEP_DEBUG: ${{ vars.ACTIONS_STEP_DEBUG || false }}
       run: |
         "${{ github.action_path }}/provide-default-inputs.sh"
 

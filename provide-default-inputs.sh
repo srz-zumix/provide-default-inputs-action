@@ -1,10 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail
-
-if [ "${ACTIONS_STEP_DEBUG:-}" == 'true' ]; then
-    set -x
-fi
+set -euox pipefail
 
 TEMP_DIR="${RUNNER_TEMP:-./tmp}/provide-default-inputs"
 DOWNLOAD_YAMLFILE="${TEMP_DIR}/provide-default-inputs-download.yml"
