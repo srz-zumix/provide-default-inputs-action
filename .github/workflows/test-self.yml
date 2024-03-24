@@ -10,7 +10,7 @@ on:
         type: boolean
         default: false
         required: false
-      nothing:
+      text:
         required: false
 
 permissions:
@@ -35,26 +35,35 @@ jobs:
         with:
           name: test
       - name: Test test
+        env:
+          ACTUAL: ${{ steps.inputs-test.outputs.value }}
+          EXPECT: ${{ inputs.test || 'hoge' }}
         run: |
-          test "${{ steps.inputs-test.outputs.value }}" == 'hoge'
+          test "${ACTUAL}" == "${EXPECT}"
       - uses: ./
         id: inputs-flag
         with:
           name: flag
       - name: Test flag
+        env:
+          ACTUAL: ${{ steps.inputs-flag.outputs.value }}
+          EXPECT: ${{ inputs.flag || 'false' }}
         run: |
-          test "${{ steps.inputs-flag.outputs.value }}" == 'false'
+          test "${ACTUAL}" == "${EXPECT}"
       - uses: ./
         id: inputs-all
       - name: Test
         env:
-          INPUTS_TEST: ${{ fromJson(steps.inputs-all.outputs.value).test }}
-          INPUTS_FLAG: ${{ fromJson(steps.inputs-all.outputs.value).flag }}
-          INPUTS_NOTHING: ${{ fromJson(steps.inputs-all.outputs.value).nothing }}
+          ACTUAL_TEST: ${{ fromJson(steps.inputs-all.outputs.value).test }}
+          EXPECT_TEST: ${{ inputs.test || 'hoge' }}
+          ACTUAL_FLAG: ${{ fromJson(steps.inputs-all.outputs.value).flag }}
+          EXPECT_FLAG: ${{ inputs.flag || 'false' }}
+          ACTUAL_TEXT: ${{ fromJson(steps.inputs-all.outputs.value).text }}
+          EXPECT_TEXT: ${{ inputs.text || '' }}
         run: |
-          test "${{ env.INPUTS_TEST }}" == 'hoge'
-          test "${{ env.INPUTS_FLAG }}" == 'false'
-          test "${{ env.INPUTS_NOTHING }}" == ''
+          test "${{ env.ACTUAL_TEST }}" == "${EXPECT_TEST}"
+          test "${{ env.ACTUAL_FLAG }}" == "${EXPECT_FLAG}"
+          test "${{ env.ACTUAL_TEXT }}" == "${EXPECT_TEXT}"
       
 
 
