@@ -6,7 +6,7 @@ inputs:
     description: 'inputs key name. (if empty then all inputs)'
     default: ""
   inputs-json:
-    default: "${{ toJson(github.event.inputs) }}"
+    default: "${{ toJson(inputs) }}"
 
 outputs:
   value:
