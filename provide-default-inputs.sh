@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+if [ "${ACTIONS_RUNNER_DEBUG:-}" == 'true' ]; then
+    set -x
+fi
 if [ "${ACTIONS_STEP_DEBUG:-}" == 'true' ]; then
     set -x
 fi
