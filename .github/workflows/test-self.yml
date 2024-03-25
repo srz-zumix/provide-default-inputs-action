@@ -55,10 +55,9 @@ jobs:
         id: inputs-test
         with:
           name: test
-          inputs-json: ${{ toJson(inputs || '{}') }}
       - name: Test test
         env:
-          ACTUAL: ${{ steps.inputs-test.outputs.value }}
+          ACTUAL: ${{ inputs.test || steps.inputs-test.outputs.value }}
           EXPECT: ${{ inputs.test || 'hoge' }}
         run: |
           test "${ACTUAL}" == "${EXPECT}"
@@ -66,24 +65,21 @@ jobs:
         id: inputs-flag
         with:
           name: flag
-          inputs-json: ${{ toJson(inputs || '{}') }}
       - name: Test flag
         env:
-          ACTUAL: ${{ steps.inputs-flag.outputs.value }}
+          ACTUAL: ${{ inputs.flag || steps.inputs-flag.outputs.value }}
           EXPECT: ${{ inputs.flag || 'false' }}
         run: |
           test "${ACTUAL}" == "${EXPECT}"
       - uses: ./
         id: inputs-all
-        with:
-          inputs-json: ${{ toJson(inputs || '{}') }}
       - name: Test
         env:
-          ACTUAL_TEST: ${{ fromJson(steps.inputs-all.outputs.value).test }}
+          ACTUAL_TEST: ${{ inputs.test || fromJson(steps.inputs-all.outputs.value).test }}
           EXPECT_TEST: ${{ inputs.test || 'hoge' }}
-          ACTUAL_FLAG: ${{ fromJson(steps.inputs-all.outputs.value).flag }}
+          ACTUAL_FLAG: ${{ inputs.flag || fromJson(steps.inputs-all.outputs.value).flag }}
           EXPECT_FLAG: ${{ inputs.flag || 'false' }}
-          ACTUAL_TEXT: ${{ fromJson(steps.inputs-all.outputs.value).text }}
+          ACTUAL_TEXT: ${{ inputs.text || fromJson(steps.inputs-all.outputs.value).text }}
           EXPECT_TEXT: ${{ inputs.text || '' }}
         run: |
           test "${{ env.ACTUAL_TEST }}" == "${EXPECT_TEST}"

@@ -29,24 +29,32 @@ if [ ! -f "${DOWNLOAD_YAMLFILE}" ]; then
     yq -o json "${DOWNLOAD_YAMLFILE}" > "${DOWNLOAD_JSONDIR}/download.json"
     HAS_KEY=$(jq '.on | has("workflow_dispatch")' < "${DOWNLOAD_JSONDIR}/download.json")
     if [ "${HAS_KEY}" == 'true' ]; then
-        jq '.on.workflow_dispatch' < "${DOWNLOAD_JSONDIR}/download.json" \
-            | to_default_inputs_json > "${DOWNLOAD_JSONDIR}/workflow_dispatch.json"
+        jq '.on.workflow_dispatch' < "${DOWNLOAD_JSONDIR}/download.json" > "${DOWNLOAD_JSONDIR}/workflow_dispatch.json"
+        to_default_inputs_json < "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" > "${DOWNLOAD_JSONDIR}/workflow_dispatch.defaults.json"
     fi
     HAS_KEY=$(jq '.on | has("workflow_call")' < "${DOWNLOAD_JSONDIR}/download.json")
     if [ "${HAS_KEY}" == 'true' ]; then
-        jq '.on.workflow_call' < "${DOWNLOAD_JSONDIR}/download.json" \
-            | to_default_inputs_json > "${DOWNLOAD_JSONDIR}/workflow_call.json"
+        jq '.on.workflow_call' < "${DOWNLOAD_JSONDIR}/download.json" > "${DOWNLOAD_JSONDIR}/workflow_call.json"
+        to_default_inputs_json < "${DOWNLOAD_JSONDIR}/workflow_call.json" > "${DOWNLOAD_JSONDIR}/workflow_call.defaults.json"
+    fi
+
+    if [ -f "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" ] && [ -f "${DOWNLOAD_JSONDIR}/workflow_call.json" ]; then
+        diff -u "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" "${DOWNLOAD_JSONDIR}/workflow_call.json" > "${TEMP_DIR}/diff.txt" || \
+            {
+                echo "workflow_dispatch and workflow_call are different"
+                cat "${TEMP_DIR}/diff.txt"
+            } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
     fi
 fi
 
-if [ -f "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" ]; then
+if [ -f "${DOWNLOAD_JSONDIR}/workflow_dispatch.defaults.json" ]; then
     SELECT_EVENT=${SELECT_EVENT:-workflow_dispatch}
-elif [ -f "${DOWNLOAD_JSONDIR}/workflow_call.json" ]; then
+elif [ -f "${DOWNLOAD_JSONDIR}/workflow_call.defaults.json" ]; then
     SELECT_EVENT=${SELECT_EVENT:-workflow_call}
 fi
 
-if [ -f "${DOWNLOAD_JSONDIR}/${SELECT_EVENT}.json" ]; then
-    cp "${DOWNLOAD_JSONDIR}/${SELECT_EVENT}.json" "${DEFAULT_INPUTS_JSON}"
+if [ -f "${DOWNLOAD_JSONDIR}/${SELECT_EVENT}.defaults.json" ]; then
+    cp "${DOWNLOAD_JSONDIR}/${SELECT_EVENT}.defaults.json" "${DEFAULT_INPUTS_JSON}"
 else
     echo '{}' > "${DEFAULT_INPUTS_JSON}"
 fi
