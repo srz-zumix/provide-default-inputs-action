@@ -25,6 +25,7 @@ on:
         default: false
         required: false
       text:
+        default: "text"
         type: string
         required: false
 
