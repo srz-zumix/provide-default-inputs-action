@@ -42,7 +42,9 @@ if [ ! -f "${DOWNLOAD_YAMLFILE}" ]; then
         diff -u "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" "${DOWNLOAD_JSONDIR}/workflow_call.json" > "${TEMP_DIR}/diff.txt" || \
             {
                 echo "workflow_dispatch and workflow_call are different"
+                echo '```diff'
                 cat "${TEMP_DIR}/diff.txt"
+                echo '```'
             } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
     fi
 fi
