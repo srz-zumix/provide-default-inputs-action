@@ -25,12 +25,12 @@ to_default_inputs_json() {
 }
 
 summary_inputs_diff() {
-    yq -o yaml "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" | tee "${DOWNLOAD_JSONDIR}/workflow_dispatch.yml"
-    yq -o yaml "${DOWNLOAD_JSONDIR}/workflow_call.json" | tee "${DOWNLOAD_JSONDIR}/workflow_call.yml"
+    yq -o yaml "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" > "${DOWNLOAD_JSONDIR}/workflow_dispatch.yml"
+    yq -o yaml "${DOWNLOAD_JSONDIR}/workflow_call.json" > "${DOWNLOAD_JSONDIR}/workflow_call.yml"
     {
         echo "workflow_dispatch and workflow_call are different"
         echo '```diff'
-        diff -u "${DOWNLOAD_JSONDIR}/workflow_dispatch.yaml" "${DOWNLOAD_JSONDIR}/workflow_call.yaml" || true
+        diff -u "${DOWNLOAD_JSONDIR}/workflow_dispatch.yml" "${DOWNLOAD_JSONDIR}/workflow_call.yml" || true
         echo '```'
     } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
 }
