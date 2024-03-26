@@ -24,6 +24,17 @@ to_default_inputs_json() {
         | jq -s 'add'
 }
 
+summary_inputs_diff() {
+    yq -y "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" > "${DOWNLOAD_JSONDIR}/workflow_dispatch.yml"
+    yq -y "${DOWNLOAD_JSONDIR}/workflow_call.json" > "${DOWNLOAD_JSONDIR}/workflow_call.yml"
+    {
+        echo "workflow_dispatch and workflow_call are different"
+        echo '```diff'
+        diff -u "${DOWNLOAD_JSONDIR}/workflow_dispatch.yaml" "${DOWNLOAD_JSONDIR}/workflow_call.yaml" || true
+        echo '```'
+    } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+}
+
 if [ ! -f "${DOWNLOAD_YAMLFILE}" ]; then
     gh workflow view "${WORKFLOW_DOWNLOAD_OPTIONS[@]}" > "${DOWNLOAD_YAMLFILE}"
     yq -o json "${DOWNLOAD_YAMLFILE}" > "${DOWNLOAD_JSONDIR}/download.json"
@@ -39,13 +50,7 @@ if [ ! -f "${DOWNLOAD_YAMLFILE}" ]; then
     fi
 
     if [ -f "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" ] && [ -f "${DOWNLOAD_JSONDIR}/workflow_call.json" ]; then
-        diff -u "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" "${DOWNLOAD_JSONDIR}/workflow_call.json" > "${TEMP_DIR}/diff.txt" || \
-            {
-                echo "workflow_dispatch and workflow_call are different"
-                echo '```diff'
-                cat "${TEMP_DIR}/diff.txt"
-                echo '```'
-            } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+        diff -u "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" "${DOWNLOAD_JSONDIR}/workflow_call.json" > /dev/null || summary_inputs_diff
     fi
 fi
 
