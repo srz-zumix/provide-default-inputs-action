@@ -49,8 +49,10 @@ if [ ! -f "${DOWNLOAD_YAMLFILE}" ]; then
         to_default_inputs_json < "${DOWNLOAD_JSONDIR}/workflow_call.json" > "${DOWNLOAD_JSONDIR}/workflow_call.defaults.json"
     fi
 
-    if [ -f "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" ] && [ -f "${DOWNLOAD_JSONDIR}/workflow_call.json" ]; then
-        diff -u "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" "${DOWNLOAD_JSONDIR}/workflow_call.json" > /dev/null || summary_inputs_diff
+    if [ "${INPUTS_CHECK_DIFF}" == "true" ]; then
+        if [ -f "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" ] && [ -f "${DOWNLOAD_JSONDIR}/workflow_call.json" ]; then
+            diff -u "${DOWNLOAD_JSONDIR}/workflow_dispatch.json" "${DOWNLOAD_JSONDIR}/workflow_call.json" > /dev/null || summary_inputs_diff
+        fi
     fi
 fi
 

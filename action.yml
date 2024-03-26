@@ -5,6 +5,10 @@ inputs:
   name:
     description: 'inputs key name. (if empty then all inputs)'
     default: ""
+  check-diff:
+    description: 'check diff (workflow_dispatch vs workflow_call).'
+    default: true
+    type: boolean
 
 outputs:
   value:
@@ -22,6 +26,7 @@ runs:
       shell: bash
       env:
         INPUTS_NAME: ${{ inputs.name }}
+        INPUTS_CHECK_DIFF: ${{ inputs.check-diff }}
       run: |
         "${{ github.action_path }}/provide-default-inputs.sh"
 
