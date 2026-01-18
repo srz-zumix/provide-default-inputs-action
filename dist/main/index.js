@@ -31459,30 +31459,48 @@ class ProvideDefaultInputs {
         }
     }
     async generateOutput() {
-        const inputsJsonFile = path.join(this.downloadJsonDir, 'inputs.json');
-        const inputsJson = (await this.fileExists(inputsJsonFile))
-            ? inputsJsonFile
-            : this.defaultInputsJson;
-        // Read the input data
-        const inputsContent = await fs.readFile(inputsJson, 'utf8');
-        const inputsData = JSON.parse(inputsContent);
-        let outputValue;
-        if (!this.selectKeyName) {
-            outputValue = JSON.stringify(inputsData);
+        try {
+            const inputsJsonFile = path.join(this.downloadJsonDir, 'inputs.json');
+            const inputsJson = (await this.fileExists(inputsJsonFile))
+                ? inputsJsonFile
+                : this.defaultInputsJson;
+            coreExports.debug(`Using inputs file: ${inputsJson}`);
+            // Read the default inputs data
+            const defaultInputsContent = await fs.readFile(this.defaultInputsJson, 'utf8');
+            const defaultInputsData = JSON.parse(defaultInputsContent);
+            coreExports.debug(`Default inputs: ${JSON.stringify(defaultInputsData)}`);
+            // Read the actual inputs data
+            const inputsContent = await fs.readFile(inputsJson, 'utf8');
+            const inputsData = JSON.parse(inputsContent);
+            coreExports.debug(`Inputs data: ${JSON.stringify(inputsData)}`);
+            let outputValue;
+            if (!this.selectKeyName) {
+                // Return the entire inputs JSON as compact JSON string
+                outputValue = JSON.stringify(inputsData);
+            }
+            else {
+                // Return the specific key value from inputs JSON
+                outputValue = inputsData[this.selectKeyName];
+                if (outputValue === undefined || outputValue === null) {
+                    outputValue = '';
+                }
+            }
+            coreExports.debug(`Output value: ${outputValue}`);
+            // Set outputs
+            coreExports.setOutput('json', this.defaultInputsJson);
+            coreExports.setOutput('value', outputValue);
+            // Also write to GITHUB_OUTPUT if available
+            if (process.env.GITHUB_OUTPUT) {
+                const outputLines = [
+                    `json=${this.defaultInputsJson}`,
+                    `value=${outputValue}`
+                ];
+                await fs.appendFile(process.env.GITHUB_OUTPUT, outputLines.join('\n') + '\n');
+            }
         }
-        else {
-            outputValue = inputsData[this.selectKeyName] || '';
-        }
-        // Set outputs
-        coreExports.setOutput('json', this.defaultInputsJson);
-        coreExports.setOutput('value', outputValue);
-        // Also write to GITHUB_OUTPUT if available
-        if (process.env.GITHUB_OUTPUT) {
-            const outputLines = [
-                `json=${this.defaultInputsJson}`,
-                `value=${outputValue}`
-            ];
-            await fs.appendFile(process.env.GITHUB_OUTPUT, outputLines.join('\n') + '\n');
+        catch (error) {
+            coreExports.error(`Error in generateOutput: ${error}`);
+            throw error;
         }
     }
     async run() {
@@ -31510,10 +31528,8 @@ class ProvideDefaultInputs {
     }
 }
 // Run the action
-if (require.main === module) {
-    const action = new ProvideDefaultInputs();
-    action.run();
-}
+const action = new ProvideDefaultInputs();
+action.run();
 
 export { ProvideDefaultInputs };
 //# sourceMappingURL=index.js.map
