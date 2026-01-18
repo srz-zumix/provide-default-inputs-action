@@ -74,7 +74,19 @@ jobs:
           test "${ACTUAL}" == "${EXPECT}"
       - uses: ./
         id: inputs-all
-      - name: Test
+      - name: Test (new direct output access)
+        env:
+          ACTUAL_TEST: ${{ inputs.test || steps.inputs-all.outputs.test }}
+          EXPECT_TEST: ${{ inputs.test || 'hoge' }}
+          ACTUAL_FLAG: ${{ inputs.flag || steps.inputs-all.outputs.flag }}
+          EXPECT_FLAG: ${{ inputs.flag || 'false' }}
+          ACTUAL_TEXT: ${{ inputs.text || steps.inputs-all.outputs.text }}
+          EXPECT_TEXT: ${{ inputs.text || '' }}
+        run: |
+          test "${{ env.ACTUAL_TEST }}" == "${EXPECT_TEST}"
+          test "${{ env.ACTUAL_FLAG }}" == "${EXPECT_FLAG}"
+          test "${{ env.ACTUAL_TEXT }}" == "${EXPECT_TEXT}"
+      - name: Test (backward compatibility with fromJson)
         env:
           ACTUAL_TEST: ${{ inputs.test || fromJson(steps.inputs-all.outputs.value).test }}
           EXPECT_TEST: ${{ inputs.test || 'hoge' }}
