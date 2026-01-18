@@ -17,6 +17,15 @@ outputs:
   json:
     description: "default inputs json file path"
     value: ${{ steps.evalute.outputs.json }}
+  test:
+    description: "test input value (if available in JSON)"
+    value: ${{ steps.parse-json.outputs.test }}
+  flag:
+    description: "flag input value (if available in JSON)"
+    value: ${{ steps.parse-json.outputs.flag }}
+  text:
+    description: "text input value (if available in JSON)"
+    value: ${{ steps.parse-json.outputs.text }}
 
 runs:
   using: "composite"
@@ -29,6 +38,26 @@ runs:
         INPUTS_CHECK_DIFF: ${{ inputs.check-diff }}
       run: |
         "${{ github.action_path }}/provide-default-inputs.sh"
+    
+    - name: Set individual outputs from JSON
+      id: parse-json
+      uses: actions/github-script@v7
+      if: ${{ inputs.name == '' }}
+      env:
+        JSON_VALUE: ${{ steps.evalute.outputs.value }}
+      with:
+        script: |
+          const jsonValue = process.env.JSON_VALUE;
+          if (jsonValue && jsonValue !== 'null') {
+            try {
+              const obj = JSON.parse(jsonValue);
+              for (const [key, value] of Object.entries(obj)) {
+                core.setOutput(key, value);
+              }
+            } catch (error) {
+              core.warning(`Failed to parse JSON value: ${error.message}`);
+            }
+          }
 
 branding:
   icon: 'edit-3'
