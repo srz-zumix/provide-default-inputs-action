@@ -1,0 +1,202 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test-typescript:
+    name: TypeScript Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Dependencies
+        id: npm-ci
+        run: npm ci
+
+      - name: Check Format
+        id: npm-format-check
+        run: npm run format:check
+
+      - name: Lint
+        id: npm-lint
+        run: npm run lint
+
+      - name: Test
+        id: npm-ci-test
+        run: npm run ci-test
+
+  test-action:
+    name: GitHub Actions Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Test Local Action
+        id: test-action
+        uses: ./
+        with:
+          retry: 5
+          run: |
+            echo "count=${RETRY_RUN_ATTEMPT}" | tee -a "${GITHUB_OUTPUT}"
+            test "${RETRY_RUN_ATTEMPT}" == 5
+
+      - name: Test Local Action
+        id: test-action-fail
+        continue-on-error: true
+        uses: ./
+        with:
+          retry: 3
+          run: |
+            echo "count=${RETRY_RUN_ATTEMPT}" | tee -a "${GITHUB_OUTPUT}"
+            test "${RETRY_RUN_ATTEMPT}" == 5
+
+      - name: Print Output
+        id: output
+        env:
+          RETRY_RUN_OUTPUT_JSON: ${{ toJson(steps.test-action.outputs) }}
+        run: |
+          echo "${RETRY_RUN_OUTPUT_JSON}"
+
+      - name: Test
+        env:
+          RETRY_RUN_COUNT: ${{ steps.test-action.outputs.count }}
+          RETRY_RUN_FAIL_COUNT: ${{ steps.test-action-fail.outputs.count }}
+          RETRY_RUN_FAIL_OUTCOME: ${{ steps.test-action-fail.outcome }}
+        run: |
+          test "${RETRY_RUN_COUNT}" == 5
+          test "${RETRY_RUN_FAIL_COUNT}" == 3
+          test "${RETRY_RUN_FAIL_OUTCOME}" == "failure"
+
+  test-action-env:
+    name: GitHub Actions Env Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: run env
+        run: |
+          env > run.env
+
+      - name: Test Local Action
+        id: test-action-once
+        uses: ./
+        with:
+          retry: 1
+          run: |
+            env > action.env
+
+      - name: env diff
+        run: |
+          diff run.env action.env || :
+
+  test-action-shell:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test Local Action
+        id: test-action
+        uses: ./
+        with:
+          run: |
+            echo "test"
+
+      - name: Test Local Action (login shell)
+        id: test-longin-shell
+        uses: ./
+        with:
+          shell: bash -l -ex {0}
+          run: |
+            echo "test"
+
+      - name: Test Local Action (Python)
+        id: test-python
+        uses: ./
+        with:
+          shell: python
+          run: |
+            print("Hello, world!")
+
+      - name: Test Local Action (pwsh)
+        id: test-pwsh
+        uses: ./
+        with:
+          shell: pwsh
+          run: |
+            Write-Host "Hello World!!"
+
+      - name: Test Local Action (powershell)
+        id: test-powershell
+        uses: ./
+        with:
+          shell: powershell
+          run: |
+            Write-Host "Hello World!!"
+        if: runner.os == 'Windows'
+
+      - name: Test Local Action (cmd)
+        id: test-cmd
+        uses: ./
+        with:
+          shell: cmd
+          run: |
+            echo "Hello World!!"
+        if: runner.os == 'Windows'
+
+      - name: Test Local Action (Dotnet)
+        id: test-dotnet
+        uses: ./
+        with:
+          shell: dotnet
+          run: |
+            Console.WriteLine("Hello, world!");

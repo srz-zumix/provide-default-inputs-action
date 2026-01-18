@@ -1,0 +1,370 @@
+import * as core from '@actions/core'
+import * as io from '@actions/io'
+import { exec } from '@actions/exec'
+import * as fs from 'fs/promises'
+import * as path from 'path'
+import * as yaml from 'js-yaml'
+
+interface WorkflowInput {
+  type?: string
+  description?: string
+  required?: boolean
+  default?: any
+}
+
+interface WorkflowInputs {
+  [key: string]: WorkflowInput
+}
+
+interface WorkflowTrigger {
+  inputs?: WorkflowInputs
+}
+
+interface WorkflowData {
+  on?: {
+    workflow_dispatch?: WorkflowTrigger
+    workflow_call?: WorkflowTrigger
+  }
+}
+
+interface GitHubEvent {
+  inputs?: Record<string, any>
+}
+
+class ProvideDefaultInputs {
+  private tempDir: string
+  private downloadYamlFile: string
+  private downloadJsonDir: string
+  private defaultInputsJson: string
+  private workflow: string
+  private workflowRef: string
+  private selectEvent: string
+  private selectKeyName: string
+
+  constructor() {
+    const runnerTemp = process.env.RUNNER_TEMP || './tmp'
+    this.tempDir = path.join(runnerTemp, 'provide-default-inputs')
+    this.downloadYamlFile = path.join(
+      this.tempDir,
+      'provide-default-inputs-download.yml'
+    )
+    this.downloadJsonDir = path.join(
+      this.tempDir,
+      'provide-default-inputs-download-jsons'
+    )
+    this.defaultInputsJson = path.join(
+      this.tempDir,
+      'provide-default-inputs.json'
+    )
+
+    this.workflow = process.env.GITHUB_WORKFLOW || process.argv[2] || ''
+    this.workflowRef = process.env.GITHUB_SHA || 'main'
+    this.selectEvent = core.getInput('select-event') || ''
+    this.selectKeyName = core.getInput('name') || process.argv[3] || ''
+  }
+
+  private async executeCommand(
+    command: string,
+    args: string[]
+  ): Promise<string> {
+    let output = ''
+    const options = {
+      listeners: {
+        stdout: (data: Buffer) => {
+          output += data.toString()
+        }
+      }
+    }
+
+    await exec(command, args, options)
+    return output.trim()
+  }
+
+  private async getCurrentBranch(): Promise<string> {
+    try {
+      return await this.executeCommand('git', ['branch', '--show-current'])
+    } catch (error) {
+      return 'main'
+    }
+  }
+
+  private toDefaultInputsJson(inputs: WorkflowInputs): Record<string, any> {
+    const result: Record<string, any> = {}
+
+    for (const [key, value] of Object.entries(inputs)) {
+      if (value.default !== undefined && value.default !== null) {
+        result[key] = value.default
+      }
+    }
+
+    return result
+  }
+
+  private async summaryInputsDiff(): Promise<void> {
+    const workflowDispatchFile = path.join(
+      this.downloadJsonDir,
+      'workflow_dispatch.json'
+    )
+    const workflowCallFile = path.join(
+      this.downloadJsonDir,
+      'workflow_call.json'
+    )
+
+    if (
+      (await this.fileExists(workflowDispatchFile)) &&
+      (await this.fileExists(workflowCallFile))
+    ) {
+      try {
+        const workflowDispatchYml = path.join(
+          this.downloadJsonDir,
+          'workflow_dispatch.yml'
+        )
+        const workflowCallYml = path.join(
+          this.downloadJsonDir,
+          'workflow_call.yml'
+        )
+
+        // Convert JSON to YAML
+        const dispatchJson = JSON.parse(
+          await fs.readFile(workflowDispatchFile, 'utf8')
+        )
+        const callJson = JSON.parse(await fs.readFile(workflowCallFile, 'utf8'))
+
+        await fs.writeFile(workflowDispatchYml, yaml.dump(dispatchJson))
+        await fs.writeFile(workflowCallYml, yaml.dump(callJson))
+
+        // Generate diff
+        const diffOutput = await this.executeCommand('diff', [
+          '-u',
+          workflowDispatchYml,
+          workflowCallYml
+        ])
+
+        const summary = [
+          'workflow_dispatch and workflow_call are different',
+          '```diff',
+          diffOutput,
+          '```'
+        ].join('\n')
+
+        if (process.env.GITHUB_STEP_SUMMARY) {
+          await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, summary + '\n')
+        }
+      } catch (error) {
+        // diff command returns non-zero when files differ, which is expected
+        core.debug(`Diff operation completed with differences: ${error}`)
+      }
+    }
+  }
+
+  private async fileExists(filePath: string): Promise<boolean> {
+    try {
+      await fs.access(filePath)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  private async downloadWorkflow(): Promise<void> {
+    // Create directories
+    await io.mkdirP(this.downloadJsonDir)
+
+    // Build gh workflow view command
+    const args = [
+      'workflow',
+      'view',
+      this.workflow,
+      '--yaml',
+      '--ref',
+      this.workflowRef
+    ]
+    if (process.env.GITHUB_REPOSITORY) {
+      args.push('--repo', process.env.GITHUB_REPOSITORY)
+    }
+
+    // Download workflow
+    const workflowYaml = await this.executeCommand('gh', args)
+    await fs.writeFile(this.downloadYamlFile, workflowYaml)
+
+    // Parse YAML to JSON
+    const workflowData = yaml.load(workflowYaml) as WorkflowData
+    const downloadJson = path.join(this.downloadJsonDir, 'download.json')
+    await fs.writeFile(downloadJson, JSON.stringify(workflowData, null, 2))
+
+    // Process workflow_dispatch
+    if (workflowData.on?.workflow_dispatch) {
+      const workflowDispatchFile = path.join(
+        this.downloadJsonDir,
+        'workflow_dispatch.json'
+      )
+      await fs.writeFile(
+        workflowDispatchFile,
+        JSON.stringify(workflowData.on.workflow_dispatch, null, 2)
+      )
+
+      if (workflowData.on.workflow_dispatch.inputs) {
+        const defaults = this.toDefaultInputsJson(
+          workflowData.on.workflow_dispatch.inputs
+        )
+        const defaultsFile = path.join(
+          this.downloadJsonDir,
+          'workflow_dispatch.defaults.json'
+        )
+        await fs.writeFile(defaultsFile, JSON.stringify(defaults, null, 2))
+      }
+    }
+
+    // Process workflow_call
+    if (workflowData.on?.workflow_call) {
+      const workflowCallFile = path.join(
+        this.downloadJsonDir,
+        'workflow_call.json'
+      )
+      await fs.writeFile(
+        workflowCallFile,
+        JSON.stringify(workflowData.on.workflow_call, null, 2)
+      )
+
+      if (workflowData.on.workflow_call.inputs) {
+        const defaults = this.toDefaultInputsJson(
+          workflowData.on.workflow_call.inputs
+        )
+        const defaultsFile = path.join(
+          this.downloadJsonDir,
+          'workflow_call.defaults.json'
+        )
+        await fs.writeFile(defaultsFile, JSON.stringify(defaults, null, 2))
+      }
+    }
+
+    // Check diff if requested
+    if (core.getInput('check-diff') === 'true') {
+      await this.summaryInputsDiff()
+    }
+  }
+
+  private async determineSelectEvent(): Promise<void> {
+    const workflowDispatchDefaults = path.join(
+      this.downloadJsonDir,
+      'workflow_dispatch.defaults.json'
+    )
+    const workflowCallDefaults = path.join(
+      this.downloadJsonDir,
+      'workflow_call.defaults.json'
+    )
+
+    if (!this.selectEvent) {
+      if (await this.fileExists(workflowDispatchDefaults)) {
+        this.selectEvent = 'workflow_dispatch'
+      } else if (await this.fileExists(workflowCallDefaults)) {
+        this.selectEvent = 'workflow_call'
+      }
+    }
+  }
+
+  private async createDefaultInputsJson(): Promise<void> {
+    const selectedDefaultsFile = path.join(
+      this.downloadJsonDir,
+      `${this.selectEvent}.defaults.json`
+    )
+
+    if (await this.fileExists(selectedDefaultsFile)) {
+      const content = await fs.readFile(selectedDefaultsFile, 'utf8')
+      await fs.writeFile(this.defaultInputsJson, content)
+    } else {
+      await fs.writeFile(this.defaultInputsJson, '{}')
+    }
+  }
+
+  private async processGitHubEvent(): Promise<void> {
+    const githubEventPath = process.env.GITHUB_EVENT_PATH
+    const inputsJsonFile = path.join(this.downloadJsonDir, 'inputs.json')
+
+    if (githubEventPath && !(await this.fileExists(inputsJsonFile))) {
+      try {
+        const eventContent = await fs.readFile(githubEventPath, 'utf8')
+        const eventData = JSON.parse(eventContent) as GitHubEvent
+
+        if (eventData.inputs) {
+          await fs.writeFile(
+            inputsJsonFile,
+            JSON.stringify(eventData.inputs, null, 2)
+          )
+        }
+      } catch (error) {
+        core.debug(`Error processing GitHub event: ${error}`)
+      }
+    }
+  }
+
+  private async generateOutput(): Promise<void> {
+    const inputsJsonFile = path.join(this.downloadJsonDir, 'inputs.json')
+    const inputsJson = (await this.fileExists(inputsJsonFile))
+      ? inputsJsonFile
+      : this.defaultInputsJson
+
+    // Read the input data
+    const inputsContent = await fs.readFile(inputsJson, 'utf8')
+    const inputsData = JSON.parse(inputsContent)
+
+    let outputValue: any
+    if (!this.selectKeyName) {
+      outputValue = JSON.stringify(inputsData)
+    } else {
+      outputValue = inputsData[this.selectKeyName] || ''
+    }
+
+    // Set outputs
+    core.setOutput('json', this.defaultInputsJson)
+    core.setOutput('value', outputValue)
+
+    // Also write to GITHUB_OUTPUT if available
+    if (process.env.GITHUB_OUTPUT) {
+      const outputLines = [
+        `json=${this.defaultInputsJson}`,
+        `value=${outputValue}`
+      ]
+      await fs.appendFile(
+        process.env.GITHUB_OUTPUT,
+        outputLines.join('\n') + '\n'
+      )
+    }
+  }
+
+  async run(): Promise<void> {
+    try {
+      // Initialize workflow ref if using git
+      if (!process.env.GITHUB_SHA) {
+        this.workflowRef = await this.getCurrentBranch()
+      }
+
+      // Download and process workflow if not already done
+      if (!(await this.fileExists(this.downloadYamlFile))) {
+        await this.downloadWorkflow()
+      }
+
+      // Determine which event to use
+      await this.determineSelectEvent()
+
+      // Create default inputs JSON
+      await this.createDefaultInputsJson()
+
+      // Process GitHub event if available
+      await this.processGitHubEvent()
+
+      // Generate final output
+      await this.generateOutput()
+    } catch (error) {
+      core.setFailed(`Action failed with error: ${error}`)
+    }
+  }
+}
+
+// Run the action
+if (require.main === module) {
+  const action = new ProvideDefaultInputs()
+  action.run()
+}
+
+export { ProvideDefaultInputs }
