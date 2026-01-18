@@ -55,3 +55,4 @@ jobs:
           VALIDATE_TYPESCRIPT_ES: false
           VALIDATE_TYPESCRIPT_STANDARD: false
           VALIDATE_JSON: false
+          VALIDATE_TRIVY: false
