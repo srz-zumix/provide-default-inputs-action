@@ -31289,20 +31289,35 @@ class ProvideDefaultInputs {
     workflowRef;
     selectEvent;
     selectKeyName;
+    githubToken;
     constructor() {
         const runnerTemp = process.env.RUNNER_TEMP || './tmp';
         this.tempDir = path.join(runnerTemp, 'provide-default-inputs');
         this.downloadYamlFile = path.join(this.tempDir, 'provide-default-inputs-download.yml');
         this.downloadJsonDir = path.join(this.tempDir, 'provide-default-inputs-download-jsons');
         this.defaultInputsJson = path.join(this.tempDir, 'provide-default-inputs.json');
-        this.workflow = process.env.GITHUB_WORKFLOW || process.argv[2] || '';
-        this.workflowRef = process.env.GITHUB_SHA || 'main';
+        this.workflow = process.env.GITHUB_WORKFLOW || '';
+        this.workflowRef = process.env.GITHUB_SHA || '';
         this.selectEvent = coreExports.getInput('select-event') || '';
-        this.selectKeyName = coreExports.getInput('name') || process.argv[3] || '';
+        this.selectKeyName = coreExports.getInput('name') || '';
+        this.githubToken =
+            coreExports.getInput('github_token') || process.env.GITHUB_TOKEN || '';
     }
     async executeCommand(command, args) {
         let output = '';
+        const env = {};
+        // Copy existing environment variables, filtering out undefined values
+        Object.entries(process.env).forEach(([key, value]) => {
+            if (value !== undefined) {
+                env[key] = value;
+            }
+        });
+        // Set GitHub token for gh command
+        if (command === 'gh' && this.githubToken) {
+            env.GITHUB_TOKEN = this.githubToken;
+        }
         const options = {
+            env,
             listeners: {
                 stdout: (data) => {
                     output += data.toString();
@@ -31377,14 +31392,10 @@ class ProvideDefaultInputs {
         // Create directories
         await ioExports.mkdirP(this.downloadJsonDir);
         // Build gh workflow view command
-        const args = [
-            'workflow',
-            'view',
-            this.workflow,
-            '--yaml',
-            '--ref',
-            this.workflowRef
-        ];
+        const args = ['workflow', 'view', this.workflow, '--yaml'];
+        if (this.workflowRef) {
+            args.push('--ref', this.workflowRef);
+        }
         if (process.env.GITHUB_REPOSITORY) {
             args.push('--repo', process.env.GITHUB_REPOSITORY);
         }
@@ -31480,9 +31491,17 @@ class ProvideDefaultInputs {
             }
             else {
                 // Return the specific key value from inputs JSON
-                outputValue = inputsData[this.selectKeyName];
-                if (outputValue === undefined || outputValue === null) {
+                const value = inputsData[this.selectKeyName];
+                if (value === undefined || value === null) {
                     outputValue = '';
+                }
+                else if (typeof value === 'object') {
+                    // If it's an object or array, stringify it
+                    outputValue = JSON.stringify(value);
+                }
+                else {
+                    // Primitive values
+                    outputValue = String(value);
                 }
             }
             coreExports.debug(`Output value: ${outputValue}`);
@@ -31505,8 +31524,8 @@ class ProvideDefaultInputs {
     }
     async run() {
         try {
-            // Initialize workflow ref if using git
-            if (!process.env.GITHUB_SHA) {
+            // Initialize workflow ref if not set
+            if (!this.workflowRef) {
                 this.workflowRef = await this.getCurrentBranch();
             }
             // Download and process workflow if not already done

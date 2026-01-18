@@ -9,7 +9,7 @@ interface WorkflowInput {
   type?: string
   description?: string
   required?: boolean
-  default?: any
+  default?: string | number | boolean | null
 }
 
 interface WorkflowInputs {
@@ -28,8 +28,15 @@ interface WorkflowData {
 }
 
 interface GitHubEvent {
-  inputs?: Record<string, any>
+  inputs?: Record<string, string | number | boolean | null>
 }
+
+// Type for JSON data that could contain various primitive values
+type JsonValue = string | number | boolean | null | JsonObject | JsonArray
+interface JsonObject {
+  [key: string]: JsonValue
+}
+type JsonArray = JsonValue[]
 
 class ProvideDefaultInputs {
   private tempDir: string
@@ -40,6 +47,7 @@ class ProvideDefaultInputs {
   private workflowRef: string
   private selectEvent: string
   private selectKeyName: string
+  private githubToken: string
 
   constructor() {
     const runnerTemp = process.env.RUNNER_TEMP || './tmp'
@@ -57,10 +65,12 @@ class ProvideDefaultInputs {
       'provide-default-inputs.json'
     )
 
-    this.workflow = process.env.GITHUB_WORKFLOW || process.argv[2] || ''
-    this.workflowRef = process.env.GITHUB_SHA || 'main'
+    this.workflow = process.env.GITHUB_WORKFLOW || ''
+    this.workflowRef = process.env.GITHUB_SHA || ''
     this.selectEvent = core.getInput('select-event') || ''
-    this.selectKeyName = core.getInput('name') || process.argv[3] || ''
+    this.selectKeyName = core.getInput('name') || ''
+    this.githubToken =
+      core.getInput('github_token') || process.env.GITHUB_TOKEN || ''
   }
 
   private async executeCommand(
@@ -68,7 +78,22 @@ class ProvideDefaultInputs {
     args: string[]
   ): Promise<string> {
     let output = ''
+    const env: { [key: string]: string } = {}
+
+    // Copy existing environment variables, filtering out undefined values
+    Object.entries(process.env).forEach(([key, value]) => {
+      if (value !== undefined) {
+        env[key] = value
+      }
+    })
+
+    // Set GitHub token for gh command
+    if (command === 'gh' && this.githubToken) {
+      env.GITHUB_TOKEN = this.githubToken
+    }
+
     const options = {
+      env,
       listeners: {
         stdout: (data: Buffer) => {
           output += data.toString()
@@ -88,8 +113,8 @@ class ProvideDefaultInputs {
     }
   }
 
-  private toDefaultInputsJson(inputs: WorkflowInputs): Record<string, any> {
-    const result: Record<string, any> = {}
+  private toDefaultInputsJson(inputs: WorkflowInputs): Record<string, string | number | boolean | null> {
+    const result: Record<string, string | number | boolean | null> = {}
 
     for (const [key, value] of Object.entries(inputs)) {
       if (value.default !== undefined && value.default !== null) {
@@ -127,8 +152,10 @@ class ProvideDefaultInputs {
         // Convert JSON to YAML
         const dispatchJson = JSON.parse(
           await fs.readFile(workflowDispatchFile, 'utf8')
-        )
-        const callJson = JSON.parse(await fs.readFile(workflowCallFile, 'utf8'))
+        ) as JsonObject
+        const callJson = JSON.parse(
+          await fs.readFile(workflowCallFile, 'utf8')
+        ) as JsonObject
 
         await fs.writeFile(workflowDispatchYml, yaml.dump(dispatchJson))
         await fs.writeFile(workflowCallYml, yaml.dump(callJson))
@@ -171,14 +198,10 @@ class ProvideDefaultInputs {
     await io.mkdirP(this.downloadJsonDir)
 
     // Build gh workflow view command
-    const args = [
-      'workflow',
-      'view',
-      this.workflow,
-      '--yaml',
-      '--ref',
-      this.workflowRef
-    ]
+    const args = ['workflow', 'view', this.workflow, '--yaml']
+    if (this.workflowRef) {
+      args.push('--ref', this.workflowRef)
+    }
     if (process.env.GITHUB_REPOSITORY) {
       args.push('--repo', process.env.GITHUB_REPOSITORY)
     }
@@ -308,24 +331,33 @@ class ProvideDefaultInputs {
       core.debug(`Using inputs file: ${inputsJson}`)
 
       // Read the default inputs data
-      const defaultInputsContent = await fs.readFile(this.defaultInputsJson, 'utf8')
-      const defaultInputsData = JSON.parse(defaultInputsContent)
+      const defaultInputsContent = await fs.readFile(
+        this.defaultInputsJson,
+        'utf8'
+      )
+      const defaultInputsData = JSON.parse(defaultInputsContent) as JsonObject
       core.debug(`Default inputs: ${JSON.stringify(defaultInputsData)}`)
-      
+
       // Read the actual inputs data
       const inputsContent = await fs.readFile(inputsJson, 'utf8')
-      const inputsData = JSON.parse(inputsContent)
+      const inputsData = JSON.parse(inputsContent) as JsonObject
       core.debug(`Inputs data: ${JSON.stringify(inputsData)}`)
 
-      let outputValue: any
+      let outputValue: string
       if (!this.selectKeyName) {
         // Return the entire inputs JSON as compact JSON string
         outputValue = JSON.stringify(inputsData)
       } else {
         // Return the specific key value from inputs JSON
-        outputValue = inputsData[this.selectKeyName]
-        if (outputValue === undefined || outputValue === null) {
+        const value = inputsData[this.selectKeyName]
+        if (value === undefined || value === null) {
           outputValue = ''
+        } else if (typeof value === 'object') {
+          // If it's an object or array, stringify it
+          outputValue = JSON.stringify(value)
+        } else {
+          // Primitive values
+          outputValue = String(value)
         }
       }
 
@@ -354,8 +386,8 @@ class ProvideDefaultInputs {
 
   async run(): Promise<void> {
     try {
-      // Initialize workflow ref if using git
-      if (!process.env.GITHUB_SHA) {
+      // Initialize workflow ref if not set
+      if (!this.workflowRef) {
         this.workflowRef = await this.getCurrentBranch()
       }
 
