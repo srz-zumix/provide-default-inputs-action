@@ -17,15 +17,6 @@ outputs:
   json:
     description: "default inputs json file path"
     value: ${{ steps.evalute.outputs.json }}
-  test:
-    description: "test input value (if available in JSON)"
-    value: ${{ steps.parse-json.outputs.test }}
-  flag:
-    description: "flag input value (if available in JSON)"
-    value: ${{ steps.parse-json.outputs.flag }}
-  text:
-    description: "text input value (if available in JSON)"
-    value: ${{ steps.parse-json.outputs.text }}
 
 runs:
   using: "composite"
