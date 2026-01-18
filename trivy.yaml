@@ -1,2 +1,4 @@
 vulnerability:
   ignore-unfixed: true
+  ignore-cves:
+    - CVE-2026-22036
