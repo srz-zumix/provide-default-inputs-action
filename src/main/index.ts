@@ -113,7 +113,9 @@ class ProvideDefaultInputs {
     }
   }
 
-  private toDefaultInputsJson(inputs: WorkflowInputs): Record<string, string | number | boolean | null> {
+  private toDefaultInputsJson(
+    inputs: WorkflowInputs
+  ): Record<string, string | number | boolean | null> {
     const result: Record<string, string | number | boolean | null> = {}
 
     for (const [key, value] of Object.entries(inputs)) {

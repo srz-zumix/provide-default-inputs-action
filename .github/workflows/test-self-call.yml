@@ -21,10 +21,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger TestSelf workflow via workflow_dispatch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh workflow run test-self.yml \
             -f test='dispatch-test' \
             -f flag=true \
             -f text='dispatch-hoge' \
-            --repo ${{ github.repository }} \
-            --ref ${{ github.ref }}
+            --repo ${GITHUB_REPOSITORY} \
+            --ref ${GITHUB_REF}
