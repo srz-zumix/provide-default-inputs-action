@@ -80,17 +80,17 @@ jobs:
           test "${ACTUAL}" == "${EXPECT_FLAG}"
       - uses: ./
         id: inputs-all
-      # - name: Test All outputs keys
-      #   env:
-      #     ACTUAL_TEST: ${{ inputs.test || steps.inputs-all.outputs.test }}
-      #     ACTUAL_FLAG: ${{ inputs.flag || steps.inputs-all.outputs.flag }}
-      #     ACTUAL_TEXT: ${{ inputs.text || steps.inputs-all.outputs.text }}
-      #     ACTUAL_ONLY: ${{ inputs.only || steps.inputs-all.outputs.only }}
-      #   run: |
-      #     test "${ACTUAL_TEST}" == "${EXPECT_TEST}"
-      #     test "${ACTUAL_FLAG}" == "${EXPECT_FLAG}"
-      #     test "${ACTUAL_TEXT}" == "${EXPECT_TEXT}"
-      #     # test "${ACTUAL_ONLY}" == "${EXPECT_ONLY}"
+      - name: Test All outputs keys
+        env:
+          ACTUAL_TEST: ${{ inputs.test || steps.inputs-all.outputs.test }}
+          ACTUAL_FLAG: ${{ inputs.flag || steps.inputs-all.outputs.flag }}
+          ACTUAL_TEXT: ${{ inputs.text || steps.inputs-all.outputs.text }}
+          ACTUAL_ONLY: ${{ inputs.only || steps.inputs-all.outputs.only }}
+        run: |
+          test "${ACTUAL_TEST}" == "${EXPECT_TEST}"
+          test "${ACTUAL_FLAG}" == "${EXPECT_FLAG}"
+          test "${ACTUAL_TEXT}" == "${EXPECT_TEXT}"
+          # test "${ACTUAL_ONLY}" == "${EXPECT_ONLY}"
       - name: Test fromJson
         env:
           ACTUAL_TEST: ${{ inputs.test || fromJson(steps.inputs-all.outputs.value).test }}

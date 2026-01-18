@@ -359,16 +359,18 @@ class ProvideDefaultInputs {
       core.setOutput('json', this.defaultInputsJson)
       core.setOutput('value', outputValue)
 
-      // Also write to GITHUB_OUTPUT if available
-      if (process.env.GITHUB_OUTPUT) {
-        const outputLines = [
-          `json=${this.defaultInputsJson}`,
-          `value=${outputValue}`
-        ]
-        await fs.appendFile(
-          process.env.GITHUB_OUTPUT,
-          outputLines.join('\n') + '\n'
-        )
+      // Set individual key-value pairs as outputs
+      for (const [key, value] of Object.entries(inputsData)) {
+        let stringValue: string
+        if (value === undefined || value === null) {
+          stringValue = ''
+        } else if (typeof value === 'object') {
+          stringValue = JSON.stringify(value)
+        } else {
+          stringValue = String(value)
+        }
+        core.setOutput(key, stringValue)
+        core.debug(`Set output ${key}: ${stringValue}`)
       }
     } catch (error) {
       core.error(`Error in generateOutput: ${error}`)
