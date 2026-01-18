@@ -83,9 +83,9 @@ jobs:
           ACTUAL_TEXT: ${{ inputs.text || steps.inputs-all.outputs.text }}
           EXPECT_TEXT: ${{ inputs.text || '' }}
         run: |
-          test "${{ env.ACTUAL_TEST }}" == "${EXPECT_TEST}"
-          test "${{ env.ACTUAL_FLAG }}" == "${EXPECT_FLAG}"
-          test "${{ env.ACTUAL_TEXT }}" == "${EXPECT_TEXT}"
+          test "${ACTUAL_TEST}" == "${EXPECT_TEST}"
+          test "${ACTUAL_FLAG}" == "${EXPECT_FLAG}"
+          test "${ACTUAL_TEXT}" == "${EXPECT_TEXT}"
       - name: Test (backward compatibility with fromJson)
         env:
           ACTUAL_TEST: ${{ inputs.test || fromJson(steps.inputs-all.outputs.value).test }}
@@ -95,9 +95,9 @@ jobs:
           ACTUAL_TEXT: ${{ inputs.text || fromJson(steps.inputs-all.outputs.value).text }}
           EXPECT_TEXT: ${{ inputs.text || '' }}
         run: |
-          test "${{ env.ACTUAL_TEST }}" == "${EXPECT_TEST}"
-          test "${{ env.ACTUAL_FLAG }}" == "${EXPECT_FLAG}"
-          test "${{ env.ACTUAL_TEXT }}" == "${EXPECT_TEXT}"
+          test "${ACTUAL_TEST}" == "${EXPECT_TEST}"
+          test "${ACTUAL_FLAG}" == "${EXPECT_FLAG}"
+          test "${ACTUAL_TEXT}" == "${EXPECT_TEXT}"
       
 
 
