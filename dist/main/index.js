@@ -31286,7 +31286,6 @@ class ProvideDefaultInputs {
     downloadJsonDir;
     defaultInputsJson;
     workflow;
-    workflowRef;
     selectEvent;
     selectKeyName;
     githubToken;
@@ -31297,7 +31296,6 @@ class ProvideDefaultInputs {
         this.downloadJsonDir = path.join(this.tempDir, 'provide-default-inputs-download-jsons');
         this.defaultInputsJson = path.join(this.tempDir, 'provide-default-inputs.json');
         this.workflow = process.env.GITHUB_WORKFLOW || '';
-        this.workflowRef = process.env.GITHUB_SHA || '';
         this.selectEvent = coreExports.getInput('select-event') || '';
         this.selectKeyName = coreExports.getInput('name') || '';
         this.githubToken =
@@ -31326,14 +31324,6 @@ class ProvideDefaultInputs {
         };
         await execExports.exec(command, args, options);
         return output.trim();
-    }
-    async getCurrentBranch() {
-        try {
-            return await this.executeCommand('git', ['branch', '--show-current']);
-        }
-        catch (error) {
-            return 'main';
-        }
     }
     toDefaultInputsJson(inputs) {
         const result = {};
@@ -31393,8 +31383,8 @@ class ProvideDefaultInputs {
         await ioExports.mkdirP(this.downloadJsonDir);
         // Build gh workflow view command
         const args = ['workflow', 'view', this.workflow, '--yaml'];
-        if (this.workflowRef) {
-            args.push('--ref', this.workflowRef);
+        if (process.env.GITHUB_SHA) {
+            args.push('--ref', process.env.GITHUB_SHA);
         }
         if (process.env.GITHUB_REPOSITORY) {
             args.push('--repo', process.env.GITHUB_REPOSITORY);
@@ -31524,10 +31514,6 @@ class ProvideDefaultInputs {
     }
     async run() {
         try {
-            // Initialize workflow ref if not set
-            if (!this.workflowRef) {
-                this.workflowRef = await this.getCurrentBranch();
-            }
             // Download and process workflow if not already done
             if (!(await this.fileExists(this.downloadYamlFile))) {
                 await this.downloadWorkflow();
