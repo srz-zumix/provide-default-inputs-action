@@ -2,15 +2,12 @@ name: TestSelf(workflow_call)
 on:
   pull_request:
 
-permissions:
-  contents: read
-  pull-requests: read
-
-env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+permissions: {}
 
 jobs:
   test-workflow-call:
+    permissions:
+      contents: read
     uses: ./.github/workflows/test-self.yml
     with:
       test: 'test'
@@ -19,6 +16,9 @@ jobs:
 
   test-workflow-dispatch:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Trigger TestSelf workflow via workflow_dispatch
         env:

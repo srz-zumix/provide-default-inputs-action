@@ -44,7 +44,6 @@ class ProvideDefaultInputs {
   private downloadJsonDir: string
   private defaultInputsJson: string
   private workflow: string
-  private workflowRef: string
   private selectEvent: string
   private selectKeyName: string
   private githubToken: string
@@ -66,7 +65,6 @@ class ProvideDefaultInputs {
     )
 
     this.workflow = process.env.GITHUB_WORKFLOW || ''
-    this.workflowRef = process.env.GITHUB_SHA || ''
     this.selectEvent = core.getInput('select-event') || ''
     this.selectKeyName = core.getInput('name') || ''
     this.githubToken =
@@ -103,14 +101,6 @@ class ProvideDefaultInputs {
 
     await exec(command, args, options)
     return output.trim()
-  }
-
-  private async getCurrentBranch(): Promise<string> {
-    try {
-      return await this.executeCommand('git', ['branch', '--show-current'])
-    } catch (error) {
-      return 'main'
-    }
   }
 
   private toDefaultInputsJson(
@@ -201,8 +191,8 @@ class ProvideDefaultInputs {
 
     // Build gh workflow view command
     const args = ['workflow', 'view', this.workflow, '--yaml']
-    if (this.workflowRef) {
-      args.push('--ref', this.workflowRef)
+    if (process.env.GITHUB_SHA) {
+      args.push('--ref', process.env.GITHUB_SHA)
     }
     if (process.env.GITHUB_REPOSITORY) {
       args.push('--repo', process.env.GITHUB_REPOSITORY)
@@ -388,11 +378,6 @@ class ProvideDefaultInputs {
 
   async run(): Promise<void> {
     try {
-      // Initialize workflow ref if not set
-      if (!this.workflowRef) {
-        this.workflowRef = await this.getCurrentBranch()
-      }
-
       // Download and process workflow if not already done
       if (!(await this.fileExists(this.downloadYamlFile))) {
         await this.downloadWorkflow()
