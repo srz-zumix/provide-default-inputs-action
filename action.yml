@@ -8,7 +8,9 @@ inputs:
   check-diff:
     description: 'check diff (workflow_dispatch vs workflow_call).'
     default: true
-    type: boolean
+  github_token:
+    description: 'github token for github filter'
+    default: ${{ github.token }}
 
 outputs:
   value:
@@ -19,16 +21,8 @@ outputs:
     value: ${{ steps.evalute.outputs.json }}
 
 runs:
-  using: "composite"
-  steps:
-    - name: Create default inputs json
-      id: evalute
-      shell: bash
-      env:
-        INPUTS_NAME: ${{ inputs.name }}
-        INPUTS_CHECK_DIFF: ${{ inputs.check-diff }}
-      run: |
-        "${{ github.action_path }}/provide-default-inputs.sh"
+  using: node24
+  main: dist/main/index.js
 
 branding:
   icon: 'edit-3'
