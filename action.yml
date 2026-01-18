@@ -5,6 +5,7 @@ inputs:
   name:
     description: 'inputs key name. (if empty then all inputs)'
     default: ""
+    type: string
   check-diff:
     description: 'check diff (workflow_dispatch vs workflow_call).'
     default: true
@@ -12,7 +13,7 @@ inputs:
   github_token:
     description: 'github token for github filter'
     default: ${{ github.token }}
-    required: false
+    type: string
 
 outputs:
   value:
