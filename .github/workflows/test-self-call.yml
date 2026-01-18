@@ -1,0 +1,30 @@
+name: TestSelf(workflow_call)
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  test-workflow-call:
+    uses: ./.github/workflows/test-self.yml
+    with:
+      test: 'test'
+      flag: true
+      text: 'hoge'
+
+  test-workflow-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger TestSelf workflow via workflow_dispatch
+        run: |
+          gh workflow run test-self.yml \
+            -f test='dispatch-test' \
+            -f flag=true \
+            -f text='dispatch-hoge' \
+            --repo ${{ github.repository }} \
+            --ref ${{ github.ref }}
