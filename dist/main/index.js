@@ -31513,28 +31513,6 @@ class ProvideDefaultInputs {
                 coreExports.setOutput(key, stringValue);
                 coreExports.debug(`Set output ${key}: ${stringValue}`);
             }
-            // Also write to GITHUB_OUTPUT if available
-            if (process.env.GITHUB_OUTPUT) {
-                const outputLines = [
-                    `json=${this.defaultInputsJson}`,
-                    `value=${outputValue}`
-                ];
-                // Add individual key-value pairs
-                for (const [key, value] of Object.entries(inputsData)) {
-                    let stringValue;
-                    if (value === undefined || value === null) {
-                        stringValue = '';
-                    }
-                    else if (typeof value === 'object') {
-                        stringValue = JSON.stringify(value);
-                    }
-                    else {
-                        stringValue = String(value);
-                    }
-                    outputLines.push(`${key}=${stringValue}`);
-                }
-                await fs.appendFile(process.env.GITHUB_OUTPUT, outputLines.join('\n') + '\n');
-            }
         }
         catch (error) {
             coreExports.error(`Error in generateOutput: ${error}`);
