@@ -28,5 +28,5 @@ jobs:
             -f test='dispatch-test' \
             -f flag=true \
             -f text='dispatch-hoge' \
-            --repo ${GITHUB_REPOSITORY} \
-            --ref ${GITHUB_REF}
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref "${GITHUB_REF}"
