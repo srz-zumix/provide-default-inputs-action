@@ -37,14 +37,14 @@ permissions:
   contents: read
   pull-requests: read
 
-env:
-  EXPECT_TEST: ${{ inputs.test || 'hoge' }}
-  EXPECT_FLAG: ${{ inputs.flag || 'false' }}
-  EXPECT_TEXT: ${{ inputs.text || 'text' }}
-  EXPECT_ONLY: ${{ inputs.only || 'call_only' }}
 jobs:
   test-action:
     runs-on: ubuntu-latest
+    env:
+      EXPECT_TEST: 'hoge'
+      EXPECT_FLAG: 'false'
+      EXPECT_TEXT: 'text'
+      EXPECT_ONLY: 'call_only'
     steps:
       - name: $github
         env:
@@ -66,39 +66,49 @@ jobs:
           name: test
       - name: Test test
         env:
-          ACTUAL: ${{ inputs.test || steps.inputs-test.outputs.value }}
+          ACTUAL: ${{ steps.inputs-test.outputs.value }}
         run: |
           test "${ACTUAL}" == "${EXPECT_TEST}"
+      - uses: ./
+        id: inputs-test-workflow_call
+        with:
+          name: test
+          prioritize-event: workflow_call
+      - name: Test test
+        env:
+          ACTUAL: ${{ steps.inputs-test-workflow_call.outputs.value }}
+        run: |
+          test -z "${ACTUAL}"
       - uses: ./
         id: inputs-flag
         with:
           name: flag
       - name: Test flag
         env:
-          ACTUAL: ${{ inputs.flag || steps.inputs-flag.outputs.value }}
+          ACTUAL: ${{ steps.inputs-flag.outputs.value }}
         run: |
           test "${ACTUAL}" == "${EXPECT_FLAG}"
       - uses: ./
         id: inputs-all
       - name: Test All outputs keys
         env:
-          ACTUAL_TEST: ${{ inputs.test || steps.inputs-all.outputs.test }}
-          ACTUAL_FLAG: ${{ inputs.flag || steps.inputs-all.outputs.flag }}
-          ACTUAL_TEXT: ${{ inputs.text || steps.inputs-all.outputs.text }}
-          ACTUAL_ONLY: ${{ inputs.only || steps.inputs-all.outputs.only }}
+          ACTUAL_TEST: ${{ steps.inputs-all.outputs.test }}
+          ACTUAL_FLAG: ${{ steps.inputs-all.outputs.flag }}
+          ACTUAL_TEXT: ${{ steps.inputs-all.outputs.text }}
+          ACTUAL_ONLY: ${{ steps.inputs-all.outputs.only }}
         run: |
           test "${ACTUAL_TEST}" == "${EXPECT_TEST}"
           test "${ACTUAL_FLAG}" == "${EXPECT_FLAG}"
           test "${ACTUAL_TEXT}" == "${EXPECT_TEXT}"
-          # test "${ACTUAL_ONLY}" == "${EXPECT_ONLY}"
+          test "${ACTUAL_ONLY}" == "${EXPECT_ONLY}"
       - name: Test fromJson
         env:
-          ACTUAL_TEST: ${{ inputs.test || fromJson(steps.inputs-all.outputs.value).test }}
-          ACTUAL_FLAG: ${{ inputs.flag || fromJson(steps.inputs-all.outputs.value).flag }}
-          ACTUAL_TEXT: ${{ inputs.text || fromJson(steps.inputs-all.outputs.value).text }}
-          ACTUAL_ONLY: ${{ inputs.only || fromJson(steps.inputs-all.outputs.value).only }}
+          ACTUAL_TEST: ${{ fromJson(steps.inputs-all.outputs.value).test }}
+          ACTUAL_FLAG: ${{ fromJson(steps.inputs-all.outputs.value).flag }}
+          ACTUAL_TEXT: ${{ fromJson(steps.inputs-all.outputs.value).text }}
+          ACTUAL_ONLY: ${{ fromJson(steps.inputs-all.outputs.value).only }}
         run: |
           test "${ACTUAL_TEST}" == "${EXPECT_TEST}"
           test "${ACTUAL_FLAG}" == "${EXPECT_FLAG}"
           test "${ACTUAL_TEXT}" == "${EXPECT_TEXT}"
-          # test "${ACTUAL_ONLY}" == "${EXPECT_ONLY}"
+          test "${ACTUAL_ONLY}" == "${EXPECT_ONLY}"

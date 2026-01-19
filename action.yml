@@ -8,6 +8,10 @@ inputs:
   check-diff:
     description: 'check diff (workflow_dispatch vs workflow_call).'
     default: true
+  prioritize-event:
+    description: 'prioritize event when merging inputs (workflow_dispatch or workflow_call)'
+    default: 'workflow_dispatch'
+    required: false
   github_token:
     description: 'github token for github filter'
     default: ${{ github.token }}

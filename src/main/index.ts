@@ -44,7 +44,7 @@ class ProvideDefaultInputs {
   private downloadJsonDir: string
   private defaultInputsJson: string
   private workflow: string
-  private selectEvent: string
+  private prioritizeEvent: string
   private selectKeyName: string
   private githubToken: string
 
@@ -65,7 +65,7 @@ class ProvideDefaultInputs {
     )
 
     this.workflow = process.env.GITHUB_WORKFLOW || ''
-    this.selectEvent = core.getInput('select-event') || ''
+    this.prioritizeEvent = core.getInput('prioritize-event') || ''
     this.selectKeyName = core.getInput('name') || ''
     this.githubToken =
       core.getInput('github_token') || process.env.GITHUB_TOKEN || ''
@@ -269,27 +269,70 @@ class ProvideDefaultInputs {
       'workflow_call.defaults.json'
     )
 
-    if (!this.selectEvent) {
+    if (!this.prioritizeEvent) {
+      // Default to workflow_dispatch if available, otherwise workflow_call
       if (await this.fileExists(workflowDispatchDefaults)) {
-        this.selectEvent = 'workflow_dispatch'
+        this.prioritizeEvent = 'workflow_dispatch'
       } else if (await this.fileExists(workflowCallDefaults)) {
-        this.selectEvent = 'workflow_call'
+        this.prioritizeEvent = 'workflow_call'
+      } else {
+        // Default to workflow_dispatch even if no files exist
+        this.prioritizeEvent = 'workflow_dispatch'
       }
     }
   }
 
   private async createDefaultInputsJson(): Promise<void> {
-    const selectedDefaultsFile = path.join(
+    const workflowDispatchDefaults = path.join(
       this.downloadJsonDir,
-      `${this.selectEvent}.defaults.json`
+      'workflow_dispatch.defaults.json'
+    )
+    const workflowCallDefaults = path.join(
+      this.downloadJsonDir,
+      'workflow_call.defaults.json'
     )
 
-    if (await this.fileExists(selectedDefaultsFile)) {
-      const content = await fs.readFile(selectedDefaultsFile, 'utf8')
-      await fs.writeFile(this.defaultInputsJson, content)
-    } else {
-      await fs.writeFile(this.defaultInputsJson, '{}')
+    let mergedDefaults: Record<string, JsonValue> = {}
+
+    // Read both default files if they exist
+    const dispatchExists = await this.fileExists(workflowDispatchDefaults)
+    const callExists = await this.fileExists(workflowCallDefaults)
+
+    if (dispatchExists) {
+      const dispatchContent = await fs.readFile(
+        workflowDispatchDefaults,
+        'utf8'
+      )
+      const dispatchDefaults = JSON.parse(dispatchContent) as JsonObject
+      mergedDefaults = { ...mergedDefaults, ...dispatchDefaults }
+      core.debug(
+        `Loaded workflow_dispatch defaults: ${JSON.stringify(dispatchDefaults)}`
+      )
     }
+
+    if (callExists) {
+      const callContent = await fs.readFile(workflowCallDefaults, 'utf8')
+      const callDefaults = JSON.parse(callContent) as JsonObject
+
+      if (this.prioritizeEvent === 'workflow_call') {
+        // workflow_call has priority: merge dispatch first, then call (call overwrites)
+        mergedDefaults = { ...mergedDefaults, ...callDefaults }
+      } else {
+        // workflow_dispatch has priority: merge call first, then dispatch (dispatch overwrites)
+        mergedDefaults = { ...callDefaults, ...mergedDefaults }
+      }
+      core.debug(
+        `Loaded workflow_call defaults: ${JSON.stringify(callDefaults)}`
+      )
+    }
+
+    core.debug(
+      `Merged defaults with ${this.prioritizeEvent} priority: ${JSON.stringify(mergedDefaults)}`
+    )
+    await fs.writeFile(
+      this.defaultInputsJson,
+      JSON.stringify(mergedDefaults, null, 2)
+    )
   }
 
   private async processGitHubEvent(): Promise<void> {

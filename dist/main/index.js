@@ -31286,7 +31286,7 @@ class ProvideDefaultInputs {
     downloadJsonDir;
     defaultInputsJson;
     workflow;
-    selectEvent;
+    prioritizeEvent;
     selectKeyName;
     githubToken;
     constructor() {
@@ -31296,7 +31296,7 @@ class ProvideDefaultInputs {
         this.downloadJsonDir = path.join(this.tempDir, 'provide-default-inputs-download-jsons');
         this.defaultInputsJson = path.join(this.tempDir, 'provide-default-inputs.json');
         this.workflow = process.env.GITHUB_WORKFLOW || '';
-        this.selectEvent = coreExports.getInput('select-event') || '';
+        this.prioritizeEvent = coreExports.getInput('prioritize-event') || '';
         this.selectKeyName = coreExports.getInput('name') || '';
         this.githubToken =
             coreExports.getInput('github_token') || process.env.GITHUB_TOKEN || '';
@@ -31424,24 +31424,48 @@ class ProvideDefaultInputs {
     async determineSelectEvent() {
         const workflowDispatchDefaults = path.join(this.downloadJsonDir, 'workflow_dispatch.defaults.json');
         const workflowCallDefaults = path.join(this.downloadJsonDir, 'workflow_call.defaults.json');
-        if (!this.selectEvent) {
+        if (!this.prioritizeEvent) {
+            // Default to workflow_dispatch if available, otherwise workflow_call
             if (await this.fileExists(workflowDispatchDefaults)) {
-                this.selectEvent = 'workflow_dispatch';
+                this.prioritizeEvent = 'workflow_dispatch';
             }
             else if (await this.fileExists(workflowCallDefaults)) {
-                this.selectEvent = 'workflow_call';
+                this.prioritizeEvent = 'workflow_call';
+            }
+            else {
+                // Default to workflow_dispatch even if no files exist
+                this.prioritizeEvent = 'workflow_dispatch';
             }
         }
     }
     async createDefaultInputsJson() {
-        const selectedDefaultsFile = path.join(this.downloadJsonDir, `${this.selectEvent}.defaults.json`);
-        if (await this.fileExists(selectedDefaultsFile)) {
-            const content = await fs.readFile(selectedDefaultsFile, 'utf8');
-            await fs.writeFile(this.defaultInputsJson, content);
+        const workflowDispatchDefaults = path.join(this.downloadJsonDir, 'workflow_dispatch.defaults.json');
+        const workflowCallDefaults = path.join(this.downloadJsonDir, 'workflow_call.defaults.json');
+        let mergedDefaults = {};
+        // Read both default files if they exist
+        const dispatchExists = await this.fileExists(workflowDispatchDefaults);
+        const callExists = await this.fileExists(workflowCallDefaults);
+        if (dispatchExists) {
+            const dispatchContent = await fs.readFile(workflowDispatchDefaults, 'utf8');
+            const dispatchDefaults = JSON.parse(dispatchContent);
+            mergedDefaults = { ...mergedDefaults, ...dispatchDefaults };
+            coreExports.debug(`Loaded workflow_dispatch defaults: ${JSON.stringify(dispatchDefaults)}`);
         }
-        else {
-            await fs.writeFile(this.defaultInputsJson, '{}');
+        if (callExists) {
+            const callContent = await fs.readFile(workflowCallDefaults, 'utf8');
+            const callDefaults = JSON.parse(callContent);
+            if (this.prioritizeEvent === 'workflow_call') {
+                // workflow_call has priority: merge dispatch first, then call (call overwrites)
+                mergedDefaults = { ...mergedDefaults, ...callDefaults };
+            }
+            else {
+                // workflow_dispatch has priority: merge call first, then dispatch (dispatch overwrites)
+                mergedDefaults = { ...callDefaults, ...mergedDefaults };
+            }
+            coreExports.debug(`Loaded workflow_call defaults: ${JSON.stringify(callDefaults)}`);
         }
+        coreExports.debug(`Merged defaults with ${this.prioritizeEvent} priority: ${JSON.stringify(mergedDefaults)}`);
+        await fs.writeFile(this.defaultInputsJson, JSON.stringify(mergedDefaults, null, 2));
     }
     async processGitHubEvent() {
         const githubEventPath = process.env.GITHUB_EVENT_PATH;
