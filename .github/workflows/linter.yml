@@ -44,7 +44,7 @@ jobs:
           DEFAULT_BRANCH: main
           FILTER_REGEX_EXCLUDE: dist/**/*
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTIONS_CONFIG_FILE: .github/actionlint.yml
+          # GITHUB_ACTIONS_CONFIG_FILE: .github/actionlint.yml
           LINTER_RULES_PATH: ${{ github.workspace }}
           VALIDATE_ALL_CODEBASE: true
           VALIDATE_BIOME_FORMAT: false
