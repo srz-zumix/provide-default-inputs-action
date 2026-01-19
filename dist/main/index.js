@@ -31328,7 +31328,9 @@ class ProvideDefaultInputs {
     toDefaultInputsJson(inputs) {
         const result = {};
         for (const [key, value] of Object.entries(inputs)) {
-            if (value.default !== undefined && value.default !== null) {
+            // Only include inputs that have a 'default' property defined
+            // This distinguishes between default: "" (empty string) and no default property
+            if (value.hasOwnProperty('default')) {
                 result[key] = value.default;
             }
         }
@@ -31445,24 +31447,25 @@ class ProvideDefaultInputs {
         // Read both default files if they exist
         const dispatchExists = await this.fileExists(workflowDispatchDefaults);
         const callExists = await this.fileExists(workflowCallDefaults);
+        let dispatchDefaults = {};
+        let callDefaults = {};
         if (dispatchExists) {
             const dispatchContent = await fs.readFile(workflowDispatchDefaults, 'utf8');
-            const dispatchDefaults = JSON.parse(dispatchContent);
-            mergedDefaults = { ...mergedDefaults, ...dispatchDefaults };
+            dispatchDefaults = JSON.parse(dispatchContent);
             coreExports.debug(`Loaded workflow_dispatch defaults: ${JSON.stringify(dispatchDefaults)}`);
         }
         if (callExists) {
             const callContent = await fs.readFile(workflowCallDefaults, 'utf8');
-            const callDefaults = JSON.parse(callContent);
-            if (this.prioritizeEvent === 'workflow_call') {
-                // workflow_call has priority: merge dispatch first, then call (call overwrites)
-                mergedDefaults = { ...mergedDefaults, ...callDefaults };
-            }
-            else {
-                // workflow_dispatch has priority: merge call first, then dispatch (dispatch overwrites)
-                mergedDefaults = { ...callDefaults, ...mergedDefaults };
-            }
+            callDefaults = JSON.parse(callContent);
             coreExports.debug(`Loaded workflow_call defaults: ${JSON.stringify(callDefaults)}`);
+        }
+        if (this.prioritizeEvent === 'workflow_call') {
+            // workflow_call has priority: start with dispatch, then override with call
+            mergedDefaults = { ...dispatchDefaults, ...callDefaults };
+        }
+        else {
+            // workflow_dispatch has priority: start with call, then override with dispatch
+            mergedDefaults = { ...callDefaults, ...dispatchDefaults };
         }
         coreExports.debug(`Merged defaults with ${this.prioritizeEvent} priority: ${JSON.stringify(mergedDefaults)}`);
         await fs.writeFile(this.defaultInputsJson, JSON.stringify(mergedDefaults, null, 2));

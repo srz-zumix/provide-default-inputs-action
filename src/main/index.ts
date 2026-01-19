@@ -109,8 +109,10 @@ class ProvideDefaultInputs {
     const result: Record<string, string | number | boolean | null> = {}
 
     for (const [key, value] of Object.entries(inputs)) {
-      if (value.default !== undefined && value.default !== null) {
-        result[key] = value.default
+      // Only include inputs that have a 'default' property defined
+      // This distinguishes between default: "" (empty string) and no default property
+      if (value.hasOwnProperty('default')) {
+        result[key] = value.default!
       }
     }
 
@@ -298,13 +300,15 @@ class ProvideDefaultInputs {
     const dispatchExists = await this.fileExists(workflowDispatchDefaults)
     const callExists = await this.fileExists(workflowCallDefaults)
 
+    let dispatchDefaults: JsonObject = {}
+    let callDefaults: JsonObject = {}
+
     if (dispatchExists) {
       const dispatchContent = await fs.readFile(
         workflowDispatchDefaults,
         'utf8'
       )
-      const dispatchDefaults = JSON.parse(dispatchContent) as JsonObject
-      mergedDefaults = { ...mergedDefaults, ...dispatchDefaults }
+      dispatchDefaults = JSON.parse(dispatchContent) as JsonObject
       core.debug(
         `Loaded workflow_dispatch defaults: ${JSON.stringify(dispatchDefaults)}`
       )
@@ -312,18 +316,18 @@ class ProvideDefaultInputs {
 
     if (callExists) {
       const callContent = await fs.readFile(workflowCallDefaults, 'utf8')
-      const callDefaults = JSON.parse(callContent) as JsonObject
-
-      if (this.prioritizeEvent === 'workflow_call') {
-        // workflow_call has priority: merge dispatch first, then call (call overwrites)
-        mergedDefaults = { ...mergedDefaults, ...callDefaults }
-      } else {
-        // workflow_dispatch has priority: merge call first, then dispatch (dispatch overwrites)
-        mergedDefaults = { ...callDefaults, ...mergedDefaults }
-      }
+      callDefaults = JSON.parse(callContent) as JsonObject
       core.debug(
         `Loaded workflow_call defaults: ${JSON.stringify(callDefaults)}`
       )
+    }
+
+    if (this.prioritizeEvent === 'workflow_call') {
+      // workflow_call has priority: start with dispatch, then override with call
+      mergedDefaults = { ...dispatchDefaults, ...callDefaults }
+    } else {
+      // workflow_dispatch has priority: start with call, then override with dispatch
+      mergedDefaults = { ...callDefaults, ...dispatchDefaults }
     }
 
     core.debug(
