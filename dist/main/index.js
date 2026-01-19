@@ -31328,10 +31328,13 @@ class ProvideDefaultInputs {
     toDefaultInputsJson(inputs) {
         const result = {};
         for (const [key, value] of Object.entries(inputs)) {
-            // Only include inputs that have a 'default' property defined
-            // This distinguishes between default: "" (empty string) and no default property
             if (value.hasOwnProperty('default')) {
+                // Use the explicitly defined default value
                 result[key] = value.default;
+            }
+            else {
+                // If no default property is defined, use empty string
+                result[key] = '';
             }
         }
         return result;

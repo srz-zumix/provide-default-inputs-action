@@ -19,7 +19,7 @@ on:
     inputs:
       test:
         type: string
-        default: 'hoge'
+        default: 'fuga'
         required: false
       flag:
         type: boolean
@@ -86,9 +86,13 @@ jobs:
         env:
           ACTUAL_VALUE: ${{ steps.inputs-test-workflow_call.outputs.value }}
           ACTUAL_TEXT: ${{ steps.inputs-all-workflow_call.outputs.text }}
+          ACTUAL_TEST: ${{ steps.inputs-all-workflow_call.outputs.test }}
+          ACTUAL_FLAG: ${{ steps.inputs-all-workflow_call.outputs.flag }}
         run: |
           test -z "${ACTUAL_VALUE}"
           test -z "${ACTUAL_TEXT}"
+          test "${ACTUAL_TEST}" == "fuga"
+          test "${ACTUAL_FLAG}" == "false"
 
       # test default prioritization (workflow_dispatch over workflow_call)
       - uses: ./
