@@ -76,7 +76,7 @@ jobs:
       - uses: ./
         id: inputs-test-workflow_call
         with:
-          name: test
+          name: text
           prioritize-event: workflow_call
       - uses: ./
         id: inputs-all-workflow_call
@@ -85,10 +85,10 @@ jobs:
       - name: Test test (workflow_call)
         env:
           ACTUAL_VALUE: ${{ steps.inputs-test-workflow_call.outputs.value }}
-          ACTUAL_TEST: ${{ steps.inputs-all-workflow_call.outputs.test }}
+          ACTUAL_TEXT: ${{ steps.inputs-all-workflow_call.outputs.text }}
         run: |
           test -z "${ACTUAL_VALUE}"
-          test -z "${ACTUAL_TEST}"
+          test -z "${ACTUAL_TEXT}"
 
       # test default prioritization (workflow_dispatch over workflow_call)
       - uses: ./
