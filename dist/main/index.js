@@ -31498,13 +31498,20 @@ class ProvideDefaultInputs {
             // Set outputs
             coreExports.setOutput('json', this.defaultInputsJson);
             coreExports.setOutput('value', outputValue);
-            // Also write to GITHUB_OUTPUT if available
-            if (process.env.GITHUB_OUTPUT) {
-                const outputLines = [
-                    `json=${this.defaultInputsJson}`,
-                    `value=${outputValue}`
-                ];
-                await fs.appendFile(process.env.GITHUB_OUTPUT, outputLines.join('\n') + '\n');
+            // Set individual key-value pairs as outputs
+            for (const [key, value] of Object.entries(inputsData)) {
+                let stringValue;
+                if (value === undefined || value === null) {
+                    stringValue = '';
+                }
+                else if (typeof value === 'object') {
+                    stringValue = JSON.stringify(value);
+                }
+                else {
+                    stringValue = String(value);
+                }
+                coreExports.setOutput(key, stringValue);
+                coreExports.debug(`Set output ${key}: ${stringValue}`);
             }
         }
         catch (error) {

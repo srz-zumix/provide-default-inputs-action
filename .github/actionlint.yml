@@ -1,0 +1,7 @@
+paths:
+  .github/workflows/**/*.{yml,yaml}:
+    ignore:
+      - 'property "test" is not defined in object type.+'
+      - 'property "flag" is not defined in object type.+'
+      - 'property "text" is not defined in object type.+'
+      - 'property "only" is not defined in object type.+'
