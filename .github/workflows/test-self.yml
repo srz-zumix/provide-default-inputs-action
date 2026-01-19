@@ -80,6 +80,15 @@ jobs:
         run: |
           test -z "${ACTUAL}"
       - uses: ./
+        id: inputs-all-workflow_call
+        with:
+          prioritize-event: workflow_call
+      - name: Test test
+        env:
+          ACTUAL: ${{ steps.inputs-all-workflow_call.outputs.value }}
+        run: |
+          test -z "${ACTUAL}"
+      - uses: ./
         id: inputs-flag
         with:
           name: flag
