@@ -60,6 +60,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+
+      # test basic
       - uses: ./
         id: inputs-test
         with:
@@ -69,25 +71,26 @@ jobs:
           ACTUAL: ${{ steps.inputs-test.outputs.value }}
         run: |
           test "${ACTUAL}" == "${EXPECT_TEST}"
+
+      # test workflow_call prioritization
       - uses: ./
         id: inputs-test-workflow_call
         with:
           name: test
           prioritize-event: workflow_call
-      - name: Test test
-        env:
-          ACTUAL: ${{ steps.inputs-test-workflow_call.outputs.value }}
-        run: |
-          test -z "${ACTUAL}"
       - uses: ./
         id: inputs-all-workflow_call
         with:
           prioritize-event: workflow_call
-      - name: Test test
+      - name: Test test (workflow_call)
         env:
-          ACTUAL: ${{ steps.inputs-all-workflow_call.outputs.value }}
+          ACTUAL_VALUE: ${{ steps.inputs-test-workflow_call.outputs.value }}
+          ACTUAL_TEST: ${{ steps.inputs-all-workflow_call.outputs.test }}
         run: |
-          test -z "${ACTUAL}"
+          test -z "${ACTUAL_VALUE}"
+          test -z "${ACTUAL_TEST}"
+
+      # test default prioritization (workflow_dispatch over workflow_call)
       - uses: ./
         id: inputs-flag
         with:
@@ -97,6 +100,8 @@ jobs:
           ACTUAL: ${{ steps.inputs-flag.outputs.value }}
         run: |
           test "${ACTUAL}" == "${EXPECT_FLAG}"
+
+      # test all inputs
       - uses: ./
         id: inputs-all
       - name: Test All outputs keys
