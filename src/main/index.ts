@@ -109,7 +109,7 @@ class ProvideDefaultInputs {
     const result: Record<string, string | number | boolean | null> = {}
 
     for (const [key, value] of Object.entries(inputs)) {
-      if (value.hasOwnProperty('default')) {
+      if (Object.prototype.hasOwnProperty.call(value, 'default')) {
         // Use the explicitly defined default value
         result[key] = value.default!
       } else {

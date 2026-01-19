@@ -31328,7 +31328,7 @@ class ProvideDefaultInputs {
     toDefaultInputsJson(inputs) {
         const result = {};
         for (const [key, value] of Object.entries(inputs)) {
-            if (value.hasOwnProperty('default')) {
+            if (Object.prototype.hasOwnProperty.call(value, 'default')) {
                 // Use the explicitly defined default value
                 result[key] = value.default;
             }
