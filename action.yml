@@ -19,10 +19,8 @@ inputs:
 outputs:
   value:
     description: "default inputs value"
-    value: ${{ steps.evalute.outputs.value }}
   json:
     description: "default inputs json file path"
-    value: ${{ steps.evalute.outputs.json }}
 
 runs:
   using: node24
