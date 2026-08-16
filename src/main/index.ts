@@ -427,6 +427,11 @@ class ProvideDefaultInputs {
     }
   }
 
+  /**
+   * The main function for the action.
+   *
+   * @returns Resolves when the action is complete.
+   */
   async run(): Promise<void> {
     try {
       // Download and process workflow if not already done
